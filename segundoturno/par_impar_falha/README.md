@@ -24,8 +24,8 @@ O tipo de ocorrência observado deve ainda ser tipificado, mas, ao meu ver, um v
 
 Com este viés criei este resumo:
 
-3 - [88% das Urnas sofreram fraudes tecnicamente comprováveis](88%%20das%20sofreram%20fraudes%20tecnicamente%20comprováveis.pdf)
+3 - [88% das Urnas sofreram fraudes tecnicamente comprováveis](88%25%20das%20Urnas%20sofreram%20fraudes%20tecnicamente%20comprováveis.pdf)
 
 E utilizando parâmetros estatisticos foi ainda criado este documento:
 
-4 - [O impacto de defeitos observados na biometria do mesário sobre o resultado do segundo turno das eleições 2022v2](O%20impacto%20de%20defeitos%20observados%20na%20biometria%20do%20mesário%20sobre%20o%20resultado%20do%20segundo%20turno%20das%20eleições%20.pdf)
+4 - [O impacto de defeitos observados na biometria do mesário sobre o resultado do segundo turno das eleições 2022v2](O%20impacto%20de%20defeitos%20observados%20na%20biometria%20do%20mesário%20sobre%20o%20resultado%20do%20segundo%20turno%20das%20eleições%202022v2.pdf)
