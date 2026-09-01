@@ -1,7 +1,5 @@
-"""Nas seções contingencia/parcial: tenta original + substituta.
-
-1) outro .logjez da mesma mun/zona/seção
-2) *.jez / *ME.jez embutido no 7z
+"""Nas secoes contingencia/parcial: original + jez interno.
+Filtro: data 29-30/10 no nome do jez + linhas do logd + 7z recursivo.
 """
 from __future__ import annotations
 
@@ -44,27 +42,60 @@ def extrai_todos(logjez, tmp):
     return [p for p in tmp.rglob("*") if p.is_file()]
 
 
+def data_no_nome(nome):
+    m = re.search(r"(29|30)10(2022)", nome)
+    if m:
+        return f"{m.group(1)}/10/2022"
+    m = re.search(r"(01|02)10(2022)", nome)
+    if m:
+        return f"{m.group(1)}/10/2022"
+    return None
+
+
+def acha_dats(root):
+    out = []
+    for p in root.rglob("*"):
+        if p.is_file() and (p.name.lower() in {"logd.dat", "log.dat"} or p.suffix.lower() == ".dat"):
+            out.append(p)
+    return out
+
+
+def extrai_rec(arquivo, dest, profundidade=3):
+    dest.mkdir(parents=True, exist_ok=True)
+    sete(["7z", "e", "-y", f"-o{dest}", str(arquivo)])
+    if profundidade <= 1:
+        return
+    for p in list(dest.rglob("*")):
+        if p.is_file() and p.suffix.lower() in {".jez", ".logjez", ".zip", ".7z"}:
+            extrai_rec(p, dest / ("n_" + p.stem), profundidade - 1)
+
+
 def processa_arquivo(logjez, datas):
     hab = comp = 0
     inner = []
     with tempfile.TemporaryDirectory() as td:
         td = Path(td)
         files = extrai_todos(logjez, td)
-        dats = [p for p in files if p.name.lower() in {"logd.dat", "log.dat"} or p.suffix.lower() == ".dat"]
+        dats = acha_dats(td)
         if dats:
             text = dats[0].read_bytes().decode("latin-1", "replace")
             hab, comp = conta_dat(text, datas)
         for p in files:
-            if p.suffix.lower() in {".jez", ".logjez"} or "me.jez" in p.name.lower():
-                sub = td / ("in_" + p.name)
-                sub.mkdir(exist_ok=True)
-                sete(["7z", "e", "-y", f"-o{sub}", str(p)])
-                idats = [q for q in sub.rglob("*") if q.is_file() and q.suffix.lower() == ".dat"]
-                if not idats:
-                    continue
-                t2 = idats[0].read_bytes().decode("latin-1", "replace")
-                h2, c2 = conta_dat(t2, datas)
-                inner.append({"nome": p.name, "hab": h2, "comp": c2})
+            if p.suffix.lower() not in {".jez", ".logjez"} and "me.jez" not in p.name.lower():
+                continue
+            dn = data_no_nome(p.name)
+            if datas and dn and dn not in datas:
+                inner.append({"nome": p.name + "/fora_turno", "hab": 0, "comp": 0})
+                continue
+            sub = td / ("in_" + p.name.replace("/", "_"))
+            extrai_rec(p, sub, 3)
+            idats = acha_dats(sub)
+            if not idats:
+                inner.append({"nome": p.name + "/vazio", "hab": 0, "comp": 0})
+                continue
+            t2 = idats[0].read_bytes().decode("latin-1", "replace")
+            h2, c2 = conta_dat(t2, datas)
+            inner.append({"nome": p.name, "hab": h2, "comp": c2})
     return hab, comp, inner
 
 
@@ -75,16 +106,14 @@ def indexa_logs(root):
         if not m:
             continue
         uf = p.parent.name.upper()
-        k = (uf, m.group(1), m.group(2), m.group(3))
-        idx[k].append(p)
+        idx[(uf, m.group(1), m.group(2), m.group(3))].append(p)
     return idx
 
 
 def worker(args):
     paths, datas = args
     tot_h = tot_c = 0
-    inners = []
-    nomes = []
+    inners, nomes = [], []
     for p in paths:
         h, c, inn = processa_arquivo(Path(p), datas)
         tot_h += h
@@ -117,7 +146,6 @@ def main(argv=None):
 
     datas = {d.strip() for d in args.datas.split(",") if d.strip()}
     want = {s.strip() for s in args.status.split(",") if s.strip()}
-
     rows = []
     with open(args.join, encoding="utf-8", errors="replace") as fh:
         for r in csv.DictReader(fh):
@@ -126,7 +154,7 @@ def main(argv=None):
             rows.append(r)
     if args.limit:
         rows = rows[: args.limit]
-    print(f"secoes alvo {len(rows)}  status={want}")
+    print(f"secoes alvo {len(rows)}  status={want}  datas={datas}")
 
     root = Path(args.root)
     print("indexando logjez...")
